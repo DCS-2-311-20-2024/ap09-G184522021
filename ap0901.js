@@ -29,16 +29,26 @@ function init() {
 
   // カメラの作成
   const camera = new THREE.PerspectiveCamera(
-    50, window.innerHeight/window.innerWidth, 0.1, 400);
+    50,window.innerHeight/window.innerWidth, 0.1, 400);
   camera.position.set(0,0,10);
   camera.lookAt(0,0,0);
 
   // レンダラの設定
   const renderer = new THREE.WebGLRenderer();
-  renderer.setSize(window.innerHeight, innerWidth);
+  renderer.setSize(window.innerHeight*0.75, innerWidth);
     document.getElementById("output").appendChild(renderer.domElement);
 
   // 描画処理
+  let score = 0; // スコアの初期値
+  let life = 3;  // ライフの初期値
+
+function setScoreAndLife() {
+  document.getElementById("score").innerText = String(Math.round(score)).padStart(8, "0");
+  document.getElementById("life").innerText = (life > 0)
+    ? "〇〇〇".substring(0, life)
+    : "--- Game Over---";
+}
+  
   // プレイヤーの宇宙船
   let player;
   function createPlayer() {
@@ -61,7 +71,7 @@ function init() {
     scene.add(player);
   }
   //宇宙の背景を作成
-  // 宇宙背景を作成 (簡易版)
+  // 宇宙背景を作成 
  function createBackgroundStars() {
    const starMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
    for (let i = 0; i < 200; i++) {
@@ -72,7 +82,6 @@ function init() {
            (Math.random() - 0.5) * 100, // Y座標
            (Math.random() - 0.5) * 100  // Z座標
        );
-       star.rotation.z = Math.PI/2;
        scene.add(star);
    }
  }
@@ -102,16 +111,74 @@ function init() {
     const mouseXNormalized = (event.clientX / window.innerWidth) * 2 - 1;  
     mouseX = mouseXNormalized * 10;  
   });
+  // 弾丸移動
+  function updateBullets() {
+    bullets.forEach((bullet, index) => {
+      bullet.position.y += 0.3; // 弾丸のスピードを調整
+      if (bullet.position.y > 20) {
+        scene.remove(bullet);
+        bullets.splice(index, 1);
+      }
+    });
+  }
   // 敵移動
   function updateEnemies() {
     enemies.forEach((enemy, index) => {
-      enemy.position.y -= 0.1;
+      enemy.position.y -= 0.02; // 落下速度
+  
+      // 宇宙船との衝突判定
+      const distanceToPlayer = enemy.position.distanceTo(player.position);
+      if (distanceToPlayer < 0.5) { //衝突判定
+        scene.remove(enemy); // 敵をシーンから削除
+        enemies.splice(index, 1); // 敵を配列から削除
+  
+        life -= 1; // ライフを1減らす
+        setScoreAndLife(); // ライフの表示を更新
+  
+        if (life <= 0) {
+          console.log("Game Over");
+          stopGame();
+        }
+        return; // 衝突した敵はこれ以上処理しない
+      }
+  
+      // 敵が画面下に到達した場合の処理
       if (enemy.position.y < -20) {
         scene.remove(enemy);
         enemies.splice(index, 1);
       }
     });
   }
+        //弾丸と敵の衝突判定
+    function checkCollisions() {
+      bullets.forEach((bullet, bulletIndex) => {
+        enemies.forEach((enemy, enemyIndex) => {
+          const distance = bullet.position.distanceTo(enemy.position);
+          if (distance < 1) { // 衝突判定
+            scene.remove(bullet);// 弾丸をシーンから削除
+            scene.remove(enemy);// 敵をシーンから削除
+            bullets.splice(bulletIndex, 1);// 弾丸を配列から削除
+            enemies.splice(enemyIndex, 1);// 敵を配列から削除
+            score += 100; // スコアを増加
+            setScoreAndLife(); // スコアとライフの表示を更新
+          }
+        });
+      });
+    }
+    function stopGame() {
+      gameOver = true;  // ゲームオーバーフラグを立てる
+    
+      // アニメーションフレームの停止
+      cancelAnimationFrame(animationFrameId);
+    
+      // 敵の生成を停止
+      clearInterval(enemyIntervalId);
+    
+      // 入力イベントの無効化（キー操作、マウス操作）
+      document.removeEventListener('keydown', onKeyDown);
+      document.removeEventListener('mousemove', onMouseMove);
+    }
+    
 
 
   // 描画関数
@@ -121,7 +188,9 @@ function init() {
     // 座標軸の表示
     axes.visible = param.axes;
     // 弾丸と敵の更新
+    updateBullets();
     updateEnemies();
+    checkCollisions()
     // 描画
     renderer.render(scene, camera);
     // 次のフレームでの描画要請
