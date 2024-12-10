@@ -52,7 +52,7 @@ function setScoreAndLife() {
   // プレイヤーの宇宙船
   let player;
   function createPlayer() {
-    const material = new THREE.LineBasicMaterial({ color: 0xffffff }); 
+    const material = new THREE.LineBasicMaterial({ color: 0xffffff }); //オブジェクトを使用して線を描画する
 
     // 宇宙船の先端部分
     const coneGeometry = new THREE.ConeGeometry(0.125, 0.5, 32);
@@ -60,7 +60,7 @@ function setScoreAndLife() {
 
     // 宇宙船の中央部分
     const discGeometry = new THREE.CylinderGeometry(0.25, 0.25, 0.075,  32);
-    const disc = new THREE.LineSegments(new THREE.EdgesGeometry(discGeometry), material);
+    const disc = new THREE.LineSegments(new THREE.EdgesGeometry(discGeometry), material);// 線を生成する元になるgeometry
     disc.position.y = -0.25; 
 
     player = new THREE.Object3D();
